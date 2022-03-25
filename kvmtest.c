@@ -102,6 +102,7 @@ int main() {
     run = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpufd, 0);
     if (!run) {
         err_exit("mmap vcpu");
+    }
 
     ret = ioctl(vcpufd, KVM_GET_SREGS, &sregs);
     if (ret == -1) {
@@ -142,13 +143,14 @@ int main() {
                     run->io.port == 0x3f8 &&
                     run->io.count == 1)
                     putchar(*(((char *)run) + run->io.data_offset));
-                else 
+                else { 
                     err_exit("unhandled KVM_EXIT_IO");
                     return 1;
+                }
                 break;
             case KVM_EXIT_FAIL_ENTRY:
                 fprintf(stderr, "KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason = 0x%llx", 
-                    (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
+                        (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
                 return 1;
             case KVM_EXIT_INTERNAL_ERROR:
                 fprintf(stderr, "KVM_EXIT_INTERNAL_ERROR: suberror = 0x%x", run->internal.suberror);
