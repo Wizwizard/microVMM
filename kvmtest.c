@@ -176,13 +176,13 @@ int main() {
             case KVM_EXIT_IO:
                 if (run->io.direction == KVM_EXIT_IO_IN) {
                     if (run->io.port == 0x45 || run->io.port == 0x44) {
-                        *(((char *)run) + run->io.data_offset) = getchar();
+                        *(((char *)run) + run->io.data_offset) = getc();
                     }
                 } else if (run->io.direction == KVM_EXIT_IO_OUT) {
                     if (run->io.port == 0x42) {
                         char key = *(((char *)run) + run->io.data_offset);
                         if (key == '\n') {
-                            printf("%s", io_buffer);
+                            printf("%s\n", io_buffer);
                             flush(io_buffer);
                             i = 0;
                         } else {
