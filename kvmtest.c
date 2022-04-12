@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <unistd.h>
 
 #define err_exit(x) do{perror((x));return 1;} while(0)
 
@@ -162,15 +163,17 @@ int main() {
                 puts("KVM_EXIT_HLT");
                 return 0;
             case KVM_EXIT_IO:
-                if (run->io.direction == KVM_EXIT_IO_IN &&
-                    run->io.size == 1 &&
-                    run->io.port == 0x60 &&
-                    run->io.count == 1)
-                    putchar(*(((char *)run) + run->io.data_offset));
-                else { 
-                    err_exit("unhandled KVM_EXIT_IO");
-                    return 1;
-                }
+                printf("KVM_EXIT_IO");
+                putchar(*(((char *)run) + run->io.data_offset));
+                sleep(1000);
+               // if (run->io.direction == KVM_EXIT_IO_IN &&
+                 //   run->io.size == 1 &&
+                //    run->io.port == 0x60 &&
+                //    run->io.count == 1)
+               // else { 
+               //     err_exit("unhandled KVM_EXIT_IO");
+               //     return 1;
+               // }
                 break;
             case KVM_EXIT_FAIL_ENTRY:
                 fprintf(stderr, "KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason = 0x%llx", 
