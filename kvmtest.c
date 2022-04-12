@@ -163,20 +163,16 @@ int main() {
                 puts("KVM_EXIT_HLT");
                 return 0;
             case KVM_EXIT_IO:
-                printf("KVM_EXIT_IO");
-                if (run->io.direction == KVM_EXIT_IO_OUT) {
-
-                printf("%x", run->io.port);
-                putchar(*(((char *)run) + run->io.data_offset));
+                if (run->io.direction == KVM_EXIT_IO_IN) {
+                    if (run->io.port == 0x45 || run->io.port == 0x44) {
+                        *(((char *)run) + run->io.data_offset) = getchar();
+                    }
+                } else if (run->io.direction == KVM_EXIT_IO_OUt) {
+                    if (run->io.port == 0x42) {
+                        putchar(*(((char *)run) + run->io.data_offset));
+                    }
                 }
-               // if (run->io.direction == KVM_EXIT_IO_IN &&
-                 //   run->io.size == 1 &&
-                //    run->io.port == 0x60 &&
-                //    run->io.count == 1)
-               // else { 
-               //     err_exit("unhandled KVM_EXIT_IO");
-               //     return 1;
-               // }
+                sleep(1000);
                 break;
             case KVM_EXIT_FAIL_ENTRY:
                 fprintf(stderr, "KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason = 0x%llx", 
