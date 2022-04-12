@@ -15,6 +15,7 @@
 
 #define KVM_FILE "/dev/kvm"
 #define BINARY_FILE "smallkern"
+#define BUFFER_SIZE 100
 
 const uint8_t code[] = {
     0xba, 0xf8, 0x03, /* mov $0x3f8, %dx */
@@ -45,6 +46,11 @@ void load_binary(char *mem_start) {
 
     }
 }
+
+void flush(char * buffer) {
+    memset(buffer, BUFFER_SIZE, 0);
+}
+
 
 int main() {
     int kvm;
@@ -151,6 +157,12 @@ int main() {
         err_exit("KVM_SET_REGS");
     }
 
+    char * io_buffer = (char*) malloc(BUFFER_SIZE*sizeof(char));
+    flush(io_buffer);
+
+    int i = 0;
+
+
     while (1) {
         ret = ioctl(vcpufd, KVM_RUN, NULL);
         if (ret == -1) {
@@ -168,7 +180,16 @@ int main() {
                     }
                 } else if (run->io.direction == KVM_EXIT_IO_OUT) {
                     if (run->io.port == 0x42) {
-                        putchar(*(((char *)run) + run->io.data_offset));
+                        char key = *(((char *)run) + run->io.data_offset);
+                        if (key == '\n') {
+                            printf("%s", io_buffer);
+                            flush(io_buffer);
+                            i = 0;
+                        } else {
+                            *(io_buffer + i) = key;
+                            i ++;
+                        }
+
                     }
                 }
                 break;

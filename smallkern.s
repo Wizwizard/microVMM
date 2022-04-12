@@ -18,4 +18,4 @@ echo:
   mov $0x42, %edx
   mov %bl, %al
   out %al, (%dx)
-  hlt
+  jmp key_in
