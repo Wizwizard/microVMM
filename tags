@@ -1,0 +1,39 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+BINARY_FILE	kvmsample.c	13;"	d	file:
+BINARY_FILE	kvmtest.c	16;"	d	file:
+CODE_START	kvmsample.c	12;"	d	file:
+KVM_DEVICE	kvmsample.c	10;"	d	file:
+KVM_FILE	kvmtest.c	15;"	d	file:
+RAM_SIZE	kvmsample.c	11;"	d	file:
+_start	smallkern.s	/^_start:$/;"	l
+code	kvmtest.c	/^const uint8_t code[] = {$/;"	v
+dev_fd	kvmsample.c	/^    int dev_fd;$/;"	m	struct:kvm	file:
+err_exit	kvmtest.c	13;"	d	file:
+kvm	kvmsample.c	/^struct kvm {$/;"	s	file:
+kvm_cpu_thread	kvmsample.c	/^void *kvm_cpu_thread(void *data) {$/;"	f
+kvm_init	kvmsample.c	/^struct kvm *kvm_init(void) {$/;"	f
+kvm_reset_vcpu	kvmsample.c	/^void kvm_reset_vcpu(struct vcpu *vcpu) {$/;"	f
+kvm_run	kvmsample.c	/^    struct kvm_run *kvm_run;$/;"	m	struct:vcpu	typeref:struct:vcpu::kvm_run	file:
+kvm_run_mmap_size	kvmsample.c	/^    int kvm_run_mmap_size;$/;"	m	struct:vcpu	file:
+kvm_version	kvmsample.c	/^    int kvm_version;$/;"	m	struct:kvm	file:
+load_binary	kvmsample.c	/^void load_binary(struct kvm *kvm) {$/;"	f
+load_binary	kvmtest.c	/^void load_binary(char *mem_start) {$/;"	f
+loop	smallkern.s	/^    loop:$/;"	l
+main	kvmtest.c	/^int main() {$/;"	f
+ram_size	kvmsample.c	/^    __u64 ram_size;$/;"	m	struct:kvm	file:
+ram_start	kvmsample.c	/^    __u64 ram_start;$/;"	m	struct:kvm	file:
+regs	kvmsample.c	/^    struct kvm_regs regs;$/;"	m	struct:vcpu	typeref:struct:vcpu::kvm_regs	file:
+sregs	kvmsample.c	/^    struct kvm_sregs sregs;$/;"	m	struct:vcpu	typeref:struct:vcpu::kvm_sregs	file:
+vcpu	kvmsample.c	/^struct vcpu {$/;"	s	file:
+vcpu_fd	kvmsample.c	/^    int vcpu_fd;$/;"	m	struct:vcpu	file:
+vcpu_id	kvmsample.c	/^    int vcpu_id;$/;"	m	struct:vcpu	file:
+vcpu_number	kvmsample.c	/^    int vcpu_number;$/;"	m	struct:kvm	file:
+vcpu_thread	kvmsample.c	/^    pthread_t vcpu_thread;$/;"	m	struct:vcpu	file:
+vcpu_thread_func	kvmsample.c	/^    void *(*vcpu_thread_func)(void *);$/;"	m	struct:vcpu	file:
+vcpus	kvmsample.c	/^    struct vcpu *vcpus;$/;"	m	struct:kvm	typeref:struct:kvm::vcpu	file:
+vm_fd	kvmsample.c	/^    int vm_fd;$/;"	m	struct:kvm	file:

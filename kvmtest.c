@@ -13,7 +13,7 @@
 #define err_exit(x) do{perror((x));return 1;} while(0)
 
 #define KVM_FILE "/dev/kvm"
-#define BINARY_FILE "smallern"
+#define BINARY_FILE "smallkern"
 
 const uint8_t code[] = {
     0xba, 0xf8, 0x03, /* mov $0x3f8, %dx */
@@ -41,7 +41,7 @@ void load_binary(char *mem_start) {
             break;
         }
         printf("read size: %d", ret);
-        p += ret;
+        mem_start += ret;
 
     }
 }
@@ -142,8 +142,8 @@ int main() {
     // flags = 0x2 means x86 architecture
     struct kvm_regs regs = {
         .rip = 0x1000,
-        .rax = 2,
-        .rbx = 2,
+        .rax = 0,
+        .rbx = 0,
         .rflags = 0x2,
     };
     ret = ioctl(vcpufd, KVM_SET_REGS, &regs);
@@ -162,9 +162,9 @@ int main() {
                 puts("KVM_EXIT_HLT");
                 return 0;
             case KVM_EXIT_IO:
-                if (run->io.direction == KVM_EXIT_IO_OUT &&
+                if (run->io.direction == KVM_EXIT_IO_IN &&
                     run->io.size == 1 &&
-                    run->io.port == 0x3f8 &&
+                    run->io.port == 0x60 &&
                     run->io.count == 1)
                     putchar(*(((char *)run) + run->io.data_offset));
                 else { 
