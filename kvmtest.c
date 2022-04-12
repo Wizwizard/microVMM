@@ -41,7 +41,6 @@ void load_binary(char *mem_start) {
         if (ret <= 0) {
             break;
         }
-        printf("read size: %d", ret);
         mem_start += ret;
 
     }
@@ -167,12 +166,11 @@ int main() {
                     if (run->io.port == 0x45 || run->io.port == 0x44) {
                         *(((char *)run) + run->io.data_offset) = getchar();
                     }
-                } else if (run->io.direction == KVM_EXIT_IO_OUt) {
+                } else if (run->io.direction == KVM_EXIT_IO_OUT) {
                     if (run->io.port == 0x42) {
                         putchar(*(((char *)run) + run->io.data_offset));
                     }
                 }
-                sleep(1000);
                 break;
             case KVM_EXIT_FAIL_ENTRY:
                 fprintf(stderr, "KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason = 0x%llx", 
