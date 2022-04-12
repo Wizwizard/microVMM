@@ -164,8 +164,11 @@ int main() {
                 return 0;
             case KVM_EXIT_IO:
                 printf("KVM_EXIT_IO");
+                if (run->io.direction == KVM_EXIT_IO_OUT) {
+
+                printf("%x", run->io.port);
                 putchar(*(((char *)run) + run->io.data_offset));
-                sleep(1000);
+                }
                // if (run->io.direction == KVM_EXIT_IO_IN &&
                  //   run->io.size == 1 &&
                 //    run->io.port == 0x60 &&
