@@ -47,12 +47,6 @@ int main() {
     }
     
     ret = ioctl(kvm, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
-    if (ret == -1)
-        err_exit("KVM_CHECK_EXTENSION");
-    if (!ret)
-        err_exit("Required extension KVM_CAP_USER_MEM not available");
-
-    ret = ioctl(kvm, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
     if (ret == -1) {
         err_exit("KVM_CHECK_EXTENSION");
     }
@@ -60,11 +54,13 @@ int main() {
         err_exit("Required extension KVM_CAP_USER_MEM not available");
     }
 
+    // what 0 represents?
     vmfd = ioctl(kvm, KVM_CREATE_VM, (unsigned long)0);
     if (vmfd == -1) {
         err_exit("KVM_CREATE_VM");
     }
 
+    // start, length, prot, flags, fd, offset
     mem = mmap(NULL, 0x1000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
     if (!mem) {
         err_exit("allocation guest memory");
@@ -72,6 +68,8 @@ int main() {
 
     memcpy(mem, code, sizeof(code));
 
+    // slot 0 identify each region of memory
+    // guest_phys_addr "physical" address as seen from the guest
     struct kvm_userspace_memory_region region = {
         .slot = 0,
         .guest_phys_addr = 0x1000,
@@ -84,11 +82,13 @@ int main() {
         err_exit("KVM_SET_USER_MEMORY_REGION");
     }
 
+    // 0 represents a sequential virtual CPU index
     vcpufd = ioctl(vmfd, KVM_CREATE_VCPU, (unsigned long)0);
     if (vcpufd == -1) {
         err_exit("KVM_CREATE_VCPU");
     }
 
+    //
     ret = ioctl(kvm, KVM_GET_VCPU_MMAP_SIZE, NULL);
     if (ret == -1) {
         err_exit("KVM_GET_VCPU_MMAP_SIZE");
@@ -116,6 +116,7 @@ int main() {
         err_exit("KVM_SET_SREGS");
     }
 
+    // flags = 0x2 means x86 architecture
     struct kvm_regs regs = {
         .rip = 0x1000,
         .rax = 2,
