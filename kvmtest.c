@@ -10,6 +10,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <unistd.h>
+#include <termios.h>
 
 #define err_exit(x) do{perror((x));return 1;} while(0)
 
@@ -51,6 +52,28 @@ void flush(char * buffer) {
     memset(buffer, BUFFER_SIZE, 0);
 }
 
+char getch(void)
+{
+    char buf = 0;
+    struct termios old = {0};
+    fflush(stdout);
+    if(tcgetattr(0, &old) < 0)
+        perror("tcsetattr()");
+    old.c_lflag &= ~ICANON;
+    old.c_lflag &= ~ECHO;
+    old.c_cc[VMIN] = 1;
+    old.c_cc[VTIME] = 0;
+    if(tcsetattr(0, TCSANOW, &old) < 0)
+        perror("tcsetattr ICANON");
+    if(read(0, &buf, 1) < 0)
+        perror("read()");
+    old.c_lflag |= ICANON;
+    old.c_lflag |= ECHO;
+    if(tcsetattr(0, TCSADRAIN, &old) < 0)
+        perror("tcsetattr ~ICANON");
+    printf("%c\n", buf);
+    return buf;
+ }
 
 int main() {
     int kvm;
