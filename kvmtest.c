@@ -13,6 +13,7 @@
 #define err_exit(x) do{perror((x));return 1;} while(0)
 
 #define KVM_FILE "/dev/kvm"
+#define BINARY_FILE "smallern"
 
 const uint8_t code[] = {
     0xba, 0xf8, 0x03, /* mov $0x3f8, %dx */
@@ -23,6 +24,27 @@ const uint8_t code[] = {
     0xee,
     0xf4,
 };
+
+void load_binary(char *mem_start) {
+    int fd = open(BINARY_FILE, O_RDONLY);
+
+    if (fd < 0) {
+        fprintf(stderr, "can not open binary file\n");
+        exit(1);
+    }
+
+    int ret = 0;
+
+    while(1) {
+        ret = read(fd, mem_start, 4096);
+        if (ret <= 0) {
+            break;
+        }
+        printf("read size: %d", ret);
+        p += ret;
+
+    }
+}
 
 int main() {
     int kvm;
@@ -66,7 +88,8 @@ int main() {
         err_exit("allocation guest memory");
     }
 
-    memcpy(mem, code, sizeof(code));
+    // memcpy(mem, code, sizeof(code));
+    load_binary(mem);
 
     // slot 0 identify each region of memory
     // guest_phys_addr "physical" address as seen from the guest
