@@ -10,7 +10,7 @@
 #define KVM_DEVICE "/dev/kvm"
 #define RAM_SIZE 512000000
 #define CODE_START 0x1000
-#define BINARY_FILE "test.bin"
+#define BINARY_FILE "smallkern"
 
 struct kvm {
     int dev_fd;
