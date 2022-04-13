@@ -256,6 +256,7 @@ int main() {
                          *(((char *)run) + run->io.data_offset) = timer_enable;
                     }
                 } else if (run->io.direction == KVM_EXIT_IO_OUT) {
+                    // to-do ack_key? ack_key?
                     if (run->io.port == 0x42) {
                         char key = *(((char *)run) + run->io.data_offset);
                         if (key == '\n') {
