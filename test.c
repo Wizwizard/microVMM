@@ -4,6 +4,7 @@
 #include <termios.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 struct termios orig_termios;
 
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
         numRead = read(0, ch, 1);
 
         if(numRead > 1) {
+            printf("ch:%c", ch[0]);
             
             if(ch[0] == '\n') {
                 printf("%s", buffer);
