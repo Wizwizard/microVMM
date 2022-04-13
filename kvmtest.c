@@ -125,8 +125,6 @@ int main() {
     size_t mmap_size;
     struct kvm_run *run;
 
-    set_conio_terminal_mode();
-
     kvm = open(KVM_FILE, O_RDWR | O_CLOEXEC);
     if (kvm == -1)
         err_exit("Open /dev/kvm failed!\n");
@@ -285,7 +283,7 @@ int main() {
                             i ++;
                         }
                     } else if (run->io.port == 0x46) {
-                        interval_ms = ((int)(*(((char *)run) + run->io.data_offset))-48) * 1000;
+                        interval_ms = ((int)(*(((char *)run) + run->io.data_offset))) * 1000;
                         printf("%l", interval_ms);
                     }
                 }
