@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <sys/select.h>
 #include <termios.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct termios orig_termios;
 
@@ -47,9 +49,22 @@ int getch()
 int main(int argc, char *argv[])
 {
     set_conio_terminal_mode();
+    char ch;
+    char * buffer = (char*)malloc(100*sizeof(char));
+    memset(buffer, 100, 0);
+    int i = 0;
+    while(1) {
+        if(kbhit()) {
+            ch = getch();
+            if(ch == '\n') {
+                printf("%s", buffer);
+                memset(buffer, 100, 0);
+                i = 0;
+            } else {
+                *buffer = ch;
+                i += 1;
+            }
 
-    while (!kbhit()) {
-        /* do some work */
+        }
     }
-    (void)getch(); /* consume the character */
 }
