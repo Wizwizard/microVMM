@@ -71,7 +71,6 @@ char getch(void)
     old.c_lflag |= ECHO;
     if(tcsetattr(0, TCSADRAIN, &old) < 0)
         perror("tcsetattr ~ICANON");
-    printf("%c\n", buf);
     return buf;
  }
 
@@ -199,7 +198,7 @@ int main() {
             case KVM_EXIT_IO:
                 if (run->io.direction == KVM_EXIT_IO_IN) {
                     if (run->io.port == 0x45 || run->io.port == 0x44) {
-                        *(((char *)run) + run->io.data_offset) = getc();
+                        *(((char *)run) + run->io.data_offset) = getch();
                     }
                 } else if (run->io.direction == KVM_EXIT_IO_OUT) {
                     if (run->io.port == 0x42) {
