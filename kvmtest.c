@@ -11,12 +11,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <termios.h>
+#include <time.h>
+#include <sys/select.h>
 
 #define err_exit(x) do{perror((x));return 1;} while(0)
 
 #define KVM_FILE "/dev/kvm"
 #define BINARY_FILE "smallkern"
 #define BUFFER_SIZE 100
+#define MIL 1000000
 
 const uint8_t code[] = {
     0xba, 0xf8, 0x03, /* mov $0x3f8, %dx */
@@ -50,6 +53,32 @@ void load_binary(char *mem_start) {
 
 void flush(char * buffer) {
     memset(buffer, BUFFER_SIZE, 0);
+}
+
+int timer_should_fired(int timer_enable)
+{
+    if (!timer_enable) {
+        return 0;
+    }
+
+}
+
+long get_cur_time_ms() {
+    
+    struct timespec s;
+    clock_gettime(CLOCK_REALTIME, &s);
+
+    return (s.tv_nsec/MIL) + s.tv_sec * 1000;
+    
+}
+
+int kbhit() 
+{
+    fd_set fds;
+    FD_ZERO(&fds);
+    // 0 is fd of stdin
+    FD_SET(0, &fds);
+    return select(1, &fds, NULL, NULL, NULL) > 0;
 }
 
 char getch(void)
@@ -181,16 +210,32 @@ int main() {
     }
 
     char * io_buffer = (char*) malloc(BUFFER_SIZE*sizeof(char));
+    char * cur_str = (char*) malloc(BUFFER_SIZE*sizeof(char));
     flush(io_buffer);
 
-    int i = 0;
 
+    int i = 0;
+    int key_in = 0;
+
+    long interval_ms;
+    long last_fired_ms;
+    long cur_time_ms;
+    int timer_enable = 0;
 
     while (1) {
         ret = ioctl(vcpufd, KVM_RUN, NULL);
         if (ret == -1) {
             err_exit("KVM_RUN");
         }
+
+        if (timer_enable) {
+            cur_time_ms = get_cur_time_ms;
+            if (cur_time_ms - last_fired_ms > interval_ms) {
+                printf("%s\n", cur_str);
+                last_fired_ms = cur_time_ms;
+            }
+        }
+
         switch (run->exit_reason) {
             // handle exit
             case KVM_EXIT_HLT:
@@ -198,8 +243,17 @@ int main() {
                 return 0;
             case KVM_EXIT_IO:
                 if (run->io.direction == KVM_EXIT_IO_IN) {
-                    if (run->io.port == 0x45 || run->io.port == 0x44) {
-                        *(((char *)run) + run->io.data_offset) = getc();
+                    if (run->io.port == 0x44) {
+                        if(kbhit()) {
+                            *(((char *)run) + run->io.data_offset) = getc();
+                            key_in = 1;
+                        } else {
+                            key_in = 0;
+                        }
+                    } else if (run->io.port == 0x45) {
+                        *(((char *)run) + run->io.data_offset) = key_in;
+                    } else if (run->io.port == 0x47) {
+                         *(((char *)run) + run->io.data_offset) = timer_enable;
                     }
                 } else if (run->io.direction == KVM_EXIT_IO_OUT) {
                     if (run->io.port == 0x42) {
@@ -207,12 +261,17 @@ int main() {
                         if (key == '\n') {
                             printf("%s\n", io_buffer);
                             flush(io_buffer);
+                            flush(cur_str);
+                            memcpy(cur_str, io_buffer, BUFFER_SIZE);
                             i = 0;
+                            timer_enable = 1;
+                            last_fired_ms = get_cur_time_ms();
                         } else {
                             *(io_buffer + i) = key;
                             i ++;
                         }
-
+                    } else if (run->io.port == 0x46) {
+                        interval_ms = ((int)(*(((char *)run) + run->io.data_offset))-48) * 1000;
                     }
                 }
                 break;
