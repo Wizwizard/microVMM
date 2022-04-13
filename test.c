@@ -48,20 +48,25 @@ int getch()
 
 int main(int argc, char *argv[])
 {
-    set_conio_terminal_mode();
-    char ch;
+    char ch[1];
     char * buffer = (char*)malloc(100*sizeof(char));
+    
+    fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
+
     memset(buffer, 100, 0);
     int i = 0;
+    int numRead = 0;
     while(1) {
-        if(kbhit()) {
-            ch = getch();
-            if(ch == '\n') {
+        numRead = read(0, ch, 1);
+
+        if(numRead > 1) {
+            
+            if(ch[0] == '\n') {
                 printf("%s", buffer);
                 memset(buffer, 100, 0);
                 i = 0;
             } else {
-                *buffer = ch;
+                *buffer = ch[0];
                 i += 1;
             }
 
