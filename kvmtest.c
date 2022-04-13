@@ -100,7 +100,6 @@ char getch(void)
     old.c_lflag |= ECHO;
     if(tcsetattr(0, TCSADRAIN, &old) < 0)
         perror("tcsetattr ~ICANON");
-    printf("%c\n", buf);
     return buf;
  }
 
@@ -229,7 +228,7 @@ int main() {
         }
 
         if (timer_enable) {
-            cur_time_ms = get_cur_time_ms;
+            cur_time_ms = get_cur_time_ms();
             if (cur_time_ms - last_fired_ms > interval_ms) {
                 printf("%s\n", cur_str);
                 last_fired_ms = cur_time_ms;
@@ -245,7 +244,7 @@ int main() {
                 if (run->io.direction == KVM_EXIT_IO_IN) {
                     if (run->io.port == 0x44) {
                         if(kbhit()) {
-                            *(((char *)run) + run->io.data_offset) = getc();
+                            *(((char *)run) + run->io.data_offset) = getch();
                             key_in = 1;
                         } else {
                             key_in = 0;
