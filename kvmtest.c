@@ -21,6 +21,8 @@
 #define BUFFER_SIZE 100
 #define MIL 1000000
 
+struct termios orig_termios;
+
 const uint8_t code[] = {
     0xba, 0xf8, 0x03, /* mov $0x3f8, %dx */
     0x00, 0xd8,       /* add %bl, %al */
@@ -30,6 +32,26 @@ const uint8_t code[] = {
     0xee,
     0xf4,
 };
+
+
+void reset_terminal_mode()
+{
+    tcsetattr(0, TCSANOW, &orig_termios);
+}
+
+void set_conio_terminal_mode()
+{
+    struct termios new_termios;
+
+    /* take two copies - one for now, one for later */
+    tcgetattr(0, &orig_termios);
+    memcpy(&new_termios, &orig_termios, sizeof(new_termios));
+
+    /* register cleanup handler, and set the new terminal mode */
+    atexit(reset_terminal_mode);
+    cfmakeraw(&new_termios);
+    tcsetattr(0, TCSANOW, &new_termios);
+}
 
 void load_binary(char *mem_start) {
     int fd = open(BINARY_FILE, O_RDONLY);
@@ -81,27 +103,17 @@ int kbhit()
     return select(1, &fds, NULL, NULL, NULL) > 0;
 }
 
-char getch(void)
+int getch()
 {
-    char buf = 0;
-    struct termios old = {0};
-    fflush(stdout);
-    if(tcgetattr(0, &old) < 0)
-        perror("tcsetattr()");
-    old.c_lflag &= ~ICANON;
-    old.c_lflag &= ~ECHO;
-    old.c_cc[VMIN] = 1;
-    old.c_cc[VTIME] = 0;
-    if(tcsetattr(0, TCSANOW, &old) < 0)
-        perror("tcsetattr ICANON");
-    if(read(0, &buf, 1) < 0)
-        perror("read()");
-    old.c_lflag |= ICANON;
-    old.c_lflag |= ECHO;
-    if(tcsetattr(0, TCSADRAIN, &old) < 0)
-        perror("tcsetattr ~ICANON");
-    return buf;
- }
+    int r;
+    unsigned char c;
+    if ((r = read(0, &c, sizeof(c))) < 0) {
+        return r;
+    } else {
+        return c;
+    }
+}
+
 
 int main() {
     int kvm;
@@ -112,6 +124,8 @@ int main() {
     struct kvm_sregs sregs;
     size_t mmap_size;
     struct kvm_run *run;
+
+    set_conio_terminal_mode();
 
     kvm = open(KVM_FILE, O_RDWR | O_CLOEXEC);
     if (kvm == -1)
@@ -244,7 +258,7 @@ int main() {
                 if (run->io.direction == KVM_EXIT_IO_IN) {
                     if (run->io.port == 0x44) {
                         if(kbhit()) {
-                            *(((char *)run) + run->io.data_offset) = getch();
+                            *(((char *)run) + run->io.data_offset) = getchar();
                             key_in = 1;
                         } else {
                             key_in = 0;
@@ -272,6 +286,7 @@ int main() {
                         }
                     } else if (run->io.port == 0x46) {
                         interval_ms = ((int)(*(((char *)run) + run->io.data_offset))-48) * 1000;
+                        printf("%l", interval_ms);
                     }
                 }
                 break;
