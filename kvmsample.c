@@ -1,125 +1,135 @@
-#include <stdio.h>
-#include <memory.h>
-#include <sys/mman.h>
-#include <pthread.h>
-#include <linux/kvm.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <assert.h>
+#include "kvmsample.h"
+#include "buffer.h"
 
-#define KVM_DEVICE "/dev/kvm"
-#define RAM_SIZE 512000000
-#define CODE_START 0x1000
-#define BINARY_FILE "smallkern"
 
-struct kvm {
-    int dev_fd;
-    int vm_fd;
-    __u64 ram_size;
-    __u64 ram_start;
-    int kvm_version;
-    struct kvm_userspace_memory_region_mem;
 
-    struct vcpu *vcpus;
-    int vcpu_number;
-};
 
-struct vcpu {
-    int vcpu_id;
-    int vcpu_fd;
-    pthread_t vcpu_thread;
-    struct kvm_run *kvm_run;
-    int kvm_run_mmap_size;
-    struct kvm_regs regs;
-    struct kvm_sregs sregs;
-    void *(*vcpu_thread_func)(void *);
-};
+int kvm_reset_vcpu(vcpu_t *vcpu) {
+    int ret;
 
-void kvm_reset_vcpu(struct vcpu *vcpu) {
-    if (ioctl(vcpu->vcpu_fd, KVM_GET_SREGS, &(vcpu->sregs)) < 0) {
-        perror("can not get sregs\n");
-        exit(1);
+    ret = ioctl(vcpufd, KVM_GET_SREGS, &vcpu->sregs);
+    if (ret == -1) {
+        err_exit("KVM_GET_SREGS");
+    }
+    vcpu->sregs.cs.base = 0;
+    vcpu->sregs.cs.selector = 0;
+
+    ret = ioctl(vcpufd, KVM_SET_SREGS, &vcpu->sregs);
+    if (ret == -1) {
+        err_exit("KVM_SET_SREGS");
     }
 
-    vcpu->sregs.cs.selector = CODE_START;
-    vcpu->sregs.cs.base = CODE_START * 16;
-    vcpu->sregs.ss.selector = CODE_START;
-    vcpu->sregs.ss.base = CODE_START * 16;
-    vcpu->sregs.ds.selector = CODE_START;
-    vcpu->sregs.ds.base = CODE_START * 16;
-    vcpu->sregs.es.selector = CODE_START;
-    vcpu->sregs.es.base = CODE_START * 16;
-    vcpu->sregs.fs.selector = CODE_START;
-    vcpu->sregs.fs.base = CODE_START * 16;
-    vcpu->sregs.gs.selector = CODE_START;
-
-    if (ioctl(vcpu->vcpu_fd, KVM_SET_SREGS, &vcpu->sregs) < 0) {
-        perror("can not set sregs");
-        exit(1);
+    // flags = 0x2 means x86 architecture
+    vcpu->regs = {
+        .rip = 0x1000,
+        .rax = 0,
+        .rbx = 0,
+        .rflags = 0x2,
+    };
+    ret = ioctl(vcpufd, KVM_SET_REGS, &vcpu->regs);
+    if (ret == -1) {
+        err_exit("KVM_SET_REGS");
     }
 
-    vcpu->regs.rflags = 0x0000000000000002ULL;
-    vcpu->regs.rip = 0;
-    vcpu->regs.rsp = 0xffffffff;
-    vcpu->regs.rbp = 0;
-
-    if (ioctl(vcpu->vcpu_fd, KVM_SET_REGS, &(vcpu->regs)) < 0) {
-        perror("KVM SET REGS\n")
-        exit(1);
-    }
+    return 0;
 }
 
-void *kvm_cpu_thread(void *data) {
-    struct kvm *kvm = (struct kvm *)data;
-    int ret = 0;
-    kvm_reset_vcpu(kvm->vcpus);
+int kvm_init_vcpu(kvm_t *kvm, vcpu_t *vcpu)
+{
+    int ret;
 
-    while (1) {
-        printf("KVM start run\n");
-        ret = ioctl(kvm->vcpu->vcpu_fd, KVM_RUN, 0);
+    vcpu->vcpu_id = VCPU_ID;
+    vcpu->vcpu_fd = ioctl(kvm->vm_fd, KVM_CREATE_VCPU, vcpu->vcpu_id);
+    if (vcpu->vcpu_fd == -1) {
+        err_exit("KVM_CREATE_VCPU");
+    }
 
-        if (ret < 0) {
-            fprintf(stderr, "KVM_RUN failed\n");
-            exit(1);
-        }
+    ret = ioctl(kvm, KVM_GET_VCPU_MMAP_SIZE, NULL);
+    if (ret == -1) {
+        err_exit("KVM_GET_VCPU_MMAP_SIZE");
+    }
 
-        switch (kvm->vcpus->kvm_run->exit_reason) {
-            case KVM_EXIT_UNKNOWN:
-                printf("KVM_EXIT_UNKNOWN\n");
-                break;
-            case KVM_EXIT_DEBUG:
-                printf("KVM_EXIT_DEBUG\n");
-                break;
-            case KVM_EXIT_IO:
-                printf("KVM_EXIT_IO\n");
-                printf("out port: %d, data: %d\n",
-                    kvm->vcpus->kvm_run->io.port,
-                    *(int *)((char *)(kvm->vcpu->kvm_run) + kvm->vcpus->kvm_run->io.data_offset)
-                    );
-                sleep(1);
-                break;
-            case KVM_EXIT_MMIO:
-                printf("KVM_EXIT_MMIO\n");
-                break;
-            case KVM_EXIT_INTR:
-                printf("KVM_EXIT_INTR\n");
-                break;
-            case KVM_EXIT_SHUTDOWN:
-                printf("KVM_EXIT_SHUTDOWN\n");
-                goto exit_kvm;
-                break;
-            default:
-                printf("KVM PANIC\n");
-                goto exit_kvm;
-        }
+    vcpu->kvm_run_mmap_size = ret;
+    if (vcpu->kvm_run_mmap_size < sizeof(vcpu->kvm_run)) {
+        err_exit("KVM_GET_VCPU_MMAP_SIZE unexpectedly small");
     }
     
-    exit_kvm:
-        return 0;
+    vcpu->kvm_run = mmap(NULL, vcpu->kvm_run_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpufd, 0);
+    if (!vcpu->kvm_run) {
+        err_exit("mmap vcpu");
+    }
+
+    return 0;
+
+}
+int kvm_create_vm(kvm_t *kvm) {
+    int ret;
+
+    kvm->vm_fd = ioctl(kvm->kvm_fd, KVM_CREATE_VM, (unsigned long)0);
+    if (kvm->vm_fd == -1) {
+        err_exit("KVM_CREATE_VM");
+    }
+
+    kvm->ram_size = RAM_SIZE;
+    kvm->ram_start = mmap(NULL, kvm->ram_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (!kvm->ram_start) {
+        err_exit("allocation guest memory");
+    }
+
+    kvm->region.slot = 0;
+    kvm->region.guest_phys_addr = 0x1000;
+    kvm->region.memory_size = kvm->ram_size;
+    kvm->region.userspace_addr = kvm->ram_start;
+
+    ret = ioctl(kvm->vm_fd, KVM_SET_USER_MEMORY_REGION, &(kvm->region));
+    if (ret == -1) {
+        err_exit("KVM_SET_USER_MEMORY_REGION");
+    }
+
+    return ret;
 }
 
+int kvm_init(kvm_t *kvm) {
+    int ret;
 
-void load_binary(struct kvm *kvm) {
+    kvm->kvm_fd = open(KVM_FILE, O_RDWR | O_CLOEXEC);
+    if (kvm->kvm_fd < 0)
+        err_exit("Open /dev/kvm failed!\n");
+
+    kvm->kvm_version = ioctl(kvm, KVM_GET_API_VERSION, NULL);
+    if (kvm->kvm_version == -1)
+        err_exit("KVM_GET_API_VERSION");
+    if (kvm->kvm_version != 12) {
+        fprintf(stderr,"KVM_GET_API_VERSION %d, expected 12", ret);
+        return 1;
+    }
+    
+    ret = ioctl(kvm, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
+    if (ret == -1) {
+        err_exit("KVM_CHECK_EXTENSION");
+    }
+    if (!ret) {
+        err_exit("Required extension KVM_CAP_USER_MEM not available");
+    }
+
+
+ 
+
+    // start, length, prot, flags, fd, offset
+
+
+    // memcpy(mem, code, sizeof(code));
+    load_binary(mem);
+
+    // slot 0 identify each region of memory
+    // guest_phys_addr "physical" address as seen from the guest
+
+
+    // 0 represents a sequential virtual CPU index
+  
+}
+
+void load_binary(kvm_t *kvm) {
     int fd = open(BINARY_FILE, O_RDONLY);
 
     if (fd < 0) {
@@ -128,20 +138,141 @@ void load_binary(struct kvm *kvm) {
     }
 
     int ret = 0;
-    char *p = (char *)kvm->ram_start;
 
     while(1) {
-        ret = read(fd, p, 4096);
+        ret = read(fd, kvm->ram_start, 4096);
         if (ret <= 0) {
             break;
         }
-        printf("read size: %d", ret);
-        p += ret;
+        kvm->ram_start += ret;
 
     }
 }
 
-struct kvm *kvm_init(void) {
-    struct kvm *kvm = malloc(sizeof(struct kvm));
+
+int kvm_run_vm(kvm_t *kvm, vcpu_t *vcpu) {
+
+    int ret;
+    struct kvm_run *run = vcpu->kvm_run;
+    timer_t *timer;
+    io_buf_t *io_buf;
+
+    timer = (timer_t*)malloc(sizeof(timer_t));
+    io_buf = (io_buf_t*)malloc(sizeof(io_buf_t));
+
+    io_buf_init(io_buf):
+
+    int key_in = 0;
+
+    while (1) {
+        ret = ioctl(vcpu->vcpu_fd, KVM_RUN, NULL);
+        if (ret == -1) {
+            err_exit("KVM_RUN");
+        }
+
+        if (timer_should_fire(timer)) {
+            printf("%s\n", io_buf->cur_str);
+        }
+
+        switch (run->exit_reason) {
+            // handle exit
+            case KVM_EXIT_HLT:
+                puts("KVM_EXIT_HLT");
+                return 0;
+            case KVM_EXIT_IO:
+                if (run->io.direction == KVM_EXIT_IO_IN) {
+                    if (run->io.port == 0x44) {
+                        if(kbhit()) {
+                            *(((char *)run) + run->io.data_offset) = getch();
+                            key_in = 1;
+                        } else {
+                            key_in = 0;
+                        }
+                    } else if (run->io.port == 0x45) {
+                        *(((char *)run) + run->io.data_offset) = key_in;
+                    } else if (run->io.port == 0x47) {
+                         *(((char *)run) + run->io.data_offset) = timer.timer_enable;
+                    }
+                } else if (run->io.direction == KVM_EXIT_IO_OUT) {
+                    // to-do ack_key? ack_key?
+                    if (run->io.port == 0x42) {
+                        char key = *(((char *)run) + run->io.data_offset);
+                        if (key == '\n') {
+
+                            flush_io_buf(io_buf);
+                            timer_update(timer);
+
+                        } else {
+                            io_buf_store(io_buf, key);
+                        }
+                    } else if (run->io.port == 0x46) {
+                        timer->interval_ms = ((int)(*(((char *)run) + run->io.data_offset))) * 1000;
+                    }
+                }
+                break;
+            case KVM_EXIT_FAIL_ENTRY:
+                fprintf(stderr, "KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason = 0x%llx", 
+                        (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
+                return 1;
+            case KVM_EXIT_INTERNAL_ERROR:
+                fprintf(stderr, "KVM_EXIT_INTERNAL_ERROR: suberror = 0x%x", run->internal.suberror);
+                return 1;
+            default:
+                fprintf(stderr, "exit_reason=0x%x\n", run->exit_reason);
+                return 0;
+        }
+    }
+
+    return 0;
+}
+
+void kvm_clean_vm(kvm_t *kvm) {
+    close(kvm->vm_fd);
+    munmap((void *)kvm->ram_start, kvm->ram_size);
+}
+
+void kvm_clean(kvm_t *kvm) {
+    assert (kvm != NULL);
+    close(kvm->kvm_fd);
+    free(kvm);
+}
+
+void kvm_clean_vcpu(vcpu_t *vcpu) {
+    munmap(vcpu->kvm_run, vcpu->kvm_run_mmap_size);
+    close(vcpu->vcpu_fd);
+}
 
 
+int main() {
+    int ret = 0;
+    kvm_t *kvm;
+    vcpu_t *vcpu; 
+    
+    kvm = (kvm_t*)malloc(sizeof(kvm_t));
+    ret = kvm_init(kvm);
+    if(ret < 0) {
+        err_exit("kvm_init failure!\n");
+    }
+
+    if(kvm_create_vm(kvm) < 0) {
+        err_exit("create vm failure\n");
+    }
+
+    load_binary(kvm);
+
+    vcpu = (vcpu_t*)malloc(sizeof(vcpu_t));
+    ret = kvm_init_vcpu(kvm, vcpu);
+    if(ret < 0) {
+        err_exit("kvm_init_vcpu failure!\n");
+    }
+
+    if(kvm_reset_vcpu(vcpu) < 0) {
+        err_exit("kvm_reset_vcpu failure!\n");
+    }
+
+    kvm_run_vm(kvm, vcpu);
+
+    kvm_clean_vm(kvm);
+    kvm_clean_vcpu(vcpu);
+    kvm_clean(kvm);
+}
