@@ -1,6 +1,6 @@
 #include "timer.h"
 
-int timer_should_fire(timer_t *timer) {
+int timer_should_fire(kvm_timer_t *timer) {
 
     if (timer->timer_enable) {
         long cur_time_ms = get_cur_time_ms();
@@ -13,7 +13,7 @@ int timer_should_fire(timer_t *timer) {
     return 0;
 }
 
-void timer_update(timer_t *timer) {
+void timer_update(kvm_timer_t *timer) {
     timer->timer_enable = 1;
     timer->last_fired_ms = get_cur_time_ms();
 }
