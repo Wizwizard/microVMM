@@ -12,9 +12,9 @@ void io_buf_store(io_buf_t *io_buf, int key) {
 
 void flush_io_buf(io_buf_t *io_buf){
     printf("%s\n", io_buf->io_buffer);
-    flush(io_buf->io_buffer);
     flush(io_buf->cur_str);
     memcpy(io_buf->cur_str, io_buf->io_buffer, BUFFER_SIZE);
+    flush(io_buf->io_buffer);
     io_buf->io_buf_ind = 0;
 }
 

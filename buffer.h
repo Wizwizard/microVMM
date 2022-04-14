@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
-
+#include <unistd.h>
 
 #define BUFFER_SIZE 100
 

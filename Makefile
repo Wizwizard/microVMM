@@ -15,6 +15,5 @@ clean:
 	rm smallkern.o
 	rm smallkern
 	rm kvmsample
-	rm kvmsample.o
 	rm timer.o
 	rm buffer.o

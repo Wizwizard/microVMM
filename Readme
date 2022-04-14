@@ -1,0 +1,3 @@
+make: generate executable file kvmsample
+./kvsample: run the proc
+make clean: clean generated files

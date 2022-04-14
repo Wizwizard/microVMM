@@ -6,7 +6,6 @@
 #define RAM_SIZE 0x1000
 #define VCPU_ID (unsigned long)0
 
-#define MIL 1000000
 
 typedef struct kvm {
     int kvm_fd;

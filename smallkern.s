@@ -5,7 +5,7 @@
 
 _start:
   mov $0x46, %edx
-  mov $0x05, %al
+  mov $0x02, %al
   out %al, (%dx)
 key_in:
   mov $0x44, %edx

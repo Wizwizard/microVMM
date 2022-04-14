@@ -192,7 +192,6 @@ int kvm_run_vm(kvm_t *kvm, vcpu_t *vcpu) {
                     if (run->io.port == 0x42) {
                         char key = *(((char *)run) + run->io.data_offset);
                         if (key == '\n') {
-
                             flush_io_buf(io_buf);
                             timer_update(timer);
 
