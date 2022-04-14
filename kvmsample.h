@@ -1,18 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <linux/kvm.h>
-#include <stdint.h>
-#include <sys/mman.h>
-#include <string.h>
-#include <unistd.h>
-#include <assert.h>
-#include "timer.h"
-#include "buffer.h"
 
 #define err_exit(x) do{perror((x));return -1;} while(0)
 
@@ -33,8 +18,6 @@ typedef struct kvm {
     struct kvm_userspace_memory_region region;
     struct vcpu *vcpus;
     int vcpu_number;
-
-    kvm_timer_t timer;
 } kvm_t;
 
 typedef struct vcpu {
@@ -50,3 +33,4 @@ int kvm_init(kvm_t *kvm) ;
 int kvm_create_vm(kvm_t *kvm);
 int kvm_init_vcpu(kvm_t *kvm, vcpu_t *vcpu);
 void load_binary(kvm_t *kvm);
+int kvm_run_vm(kvm_t *kvm, vcpu_t *vcpu);

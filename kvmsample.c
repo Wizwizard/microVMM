@@ -1,4 +1,19 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <linux/kvm.h>
+#include <stdint.h>
+#include <sys/mman.h>
+#include <string.h>
+#include <unistd.h>
+#include <assert.h>
 #include "kvmsample.h"
+#include "timer.h"
+#include "buffer.h"
 
 int kvm_reset_vcpu(vcpu_t *vcpu) {
     int ret;
@@ -10,7 +25,7 @@ int kvm_reset_vcpu(vcpu_t *vcpu) {
     vcpu->sregs.cs.base = 0;
     vcpu->sregs.cs.selector = 0;
 
-    ret = ioctl(vcpufd, KVM_SET_SREGS, &vcpu->sregs);
+    ret = ioctl(vcpu->vcpu_fd, KVM_SET_SREGS, &vcpu->sregs);
     if (ret == -1) {
         err_exit("KVM_SET_SREGS");
     }
@@ -21,7 +36,7 @@ int kvm_reset_vcpu(vcpu_t *vcpu) {
     vcpu->regs.rbx = 0;
     vcpu->regs.rflags = 0x2;
 
-    ret = ioctl(vcpufd, KVM_SET_REGS, &vcpu->regs);
+    ret = ioctl(vcpu->vcpu_fd, KVM_SET_REGS, &vcpu->regs);
     if (ret == -1) {
         err_exit("KVM_SET_REGS");
     }
@@ -74,7 +89,7 @@ int kvm_create_vm(kvm_t *kvm) {
     kvm->region.slot = 0;
     kvm->region.guest_phys_addr = 0x1000;
     kvm->region.memory_size = kvm->ram_size;
-    kvm->region.userspace_addr = kvm->ram_start;
+    kvm->region.userspace_addr = (uint64_t)kvm->ram_start;
 
     ret = ioctl(kvm->vm_fd, KVM_SET_USER_MEMORY_REGION, &(kvm->region));
     if (ret == -1) {
