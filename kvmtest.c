@@ -96,11 +96,12 @@ long get_cur_time_ms() {
 
 int kbhit() 
 {
+    struct timeval tv = { 0L, 0L };
     fd_set fds;
     FD_ZERO(&fds);
     // 0 is fd of stdin
     FD_SET(0, &fds);
-    return select(1, &fds, NULL, NULL, NULL) > 0;
+    return select(1, &fds, NULL, NULL, &tv) > 0;
 }
 
 char getch(void)
@@ -263,7 +264,6 @@ int main() {
                 puts("KVM_EXIT_HLT");
                 return 0;
             case KVM_EXIT_IO:
-                printf("kvm_exit_io, direction:%d, port:%x", run->io.direction, run->io.port);
                 if (run->io.direction == KVM_EXIT_IO_IN) {
                     if (run->io.port == 0x44) {
                         if(kbhit()) {

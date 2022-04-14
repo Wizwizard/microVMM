@@ -55,7 +55,6 @@ int main(int argc, char *argv[])
     memset(buffer, 100, 0);
     int i = 0;
     while(1) {
-        printf("%s", buffer);
         if(kbhit()) {
             ch = getchar();
             if(ch == '\n') {
