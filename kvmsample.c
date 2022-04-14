@@ -1,8 +1,4 @@
 #include "kvmsample.h"
-#include "buffer.h"
-
-
-
 
 int kvm_reset_vcpu(vcpu_t *vcpu) {
     int ret;
@@ -44,7 +40,7 @@ int kvm_init_vcpu(kvm_t *kvm, vcpu_t *vcpu)
         err_exit("KVM_CREATE_VCPU");
     }
 
-    ret = ioctl(kvm, KVM_GET_VCPU_MMAP_SIZE, NULL);
+    ret = ioctl(kvm->kvm_fd, KVM_GET_VCPU_MMAP_SIZE, NULL);
     if (ret == -1) {
         err_exit("KVM_GET_VCPU_MMAP_SIZE");
     }
@@ -54,7 +50,7 @@ int kvm_init_vcpu(kvm_t *kvm, vcpu_t *vcpu)
         err_exit("KVM_GET_VCPU_MMAP_SIZE unexpectedly small");
     }
     
-    vcpu->kvm_run = mmap(NULL, vcpu->kvm_run_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpufd, 0);
+    vcpu->kvm_run = mmap(NULL, vcpu->kvm_run_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vcpu->vcpu_fd, 0);
     if (!vcpu->kvm_run) {
         err_exit("mmap vcpu");
     }
@@ -96,7 +92,7 @@ int kvm_init(kvm_t *kvm) {
     if (kvm->kvm_fd < 0)
         err_exit("Open /dev/kvm failed!\n");
 
-    kvm->kvm_version = ioctl(kvm, KVM_GET_API_VERSION, NULL);
+    kvm->kvm_version = ioctl(kvm->kvm_fd, KVM_GET_API_VERSION, NULL);
     if (kvm->kvm_version == -1)
         err_exit("KVM_GET_API_VERSION");
     if (kvm->kvm_version != 12) {
@@ -104,29 +100,13 @@ int kvm_init(kvm_t *kvm) {
         return 1;
     }
     
-    ret = ioctl(kvm, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
+    ret = ioctl(kvm->kvm_fd, KVM_CHECK_EXTENSION, KVM_CAP_USER_MEMORY);
     if (ret == -1) {
         err_exit("KVM_CHECK_EXTENSION");
     }
     if (!ret) {
         err_exit("Required extension KVM_CAP_USER_MEM not available");
     }
-
-
- 
-
-    // start, length, prot, flags, fd, offset
-
-
-    // memcpy(mem, code, sizeof(code));
-    load_binary(mem);
-
-    // slot 0 identify each region of memory
-    // guest_phys_addr "physical" address as seen from the guest
-
-
-    // 0 represents a sequential virtual CPU index
-  
 }
 
 void load_binary(kvm_t *kvm) {
@@ -154,12 +134,13 @@ int kvm_run_vm(kvm_t *kvm, vcpu_t *vcpu) {
 
     int ret;
     struct kvm_run *run = vcpu->kvm_run;
-    timer_t *timer;
+    kvm_timer_t *timer;
     io_buf_t *io_buf;
 
-    timer = (timer_t*)malloc(sizeof(timer_t));
+    timer = (kvm_timer_t*)malloc(sizeof(kvm_timer_t));
     io_buf = (io_buf_t*)malloc(sizeof(io_buf_t));
 
+    timer->timer_enable = 0;
     io_buf_init(io_buf):
 
     int key_in = 0;
@@ -191,7 +172,7 @@ int kvm_run_vm(kvm_t *kvm, vcpu_t *vcpu) {
                     } else if (run->io.port == 0x45) {
                         *(((char *)run) + run->io.data_offset) = key_in;
                     } else if (run->io.port == 0x47) {
-                         *(((char *)run) + run->io.data_offset) = timer.timer_enable;
+                         *(((char *)run) + run->io.data_offset) = timer->timer_enable;
                     }
                 } else if (run->io.direction == KVM_EXIT_IO_OUT) {
                     // to-do ack_key? ack_key?

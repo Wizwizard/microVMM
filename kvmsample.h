@@ -10,8 +10,7 @@
 #include <sys/mman.h>
 #include <string.h>
 #include <unistd.h>
-#include <termios.h>
-#include <sys/select.h>
+#include <assert.h>
 #include "timer.h"
 #include "buffer.h"
 
@@ -29,13 +28,13 @@ typedef struct kvm {
     int kvm_version;
     int vm_fd;
     int ram_size;
-    uint8_t ram_start;
+    uint8_t *ram_start;
     
     struct kvm_userspace_memory_region region;
     struct vcpu *vcpus;
     int vcpu_number;
 
-    timer_t timer;
+    kvm_timer_t timer;
 } kvm_t;
 
 typedef struct vcpu {
@@ -47,7 +46,7 @@ typedef struct vcpu {
     struct kvm_sregs sregs;
 } vcpu_t;
 
-kvm_t * kvm_init(void) ;
-int kvm_create_vm(kvm_t *kvm, int ram_size);
+int kvm_init(kvm_t *kvm) ;
+int kvm_create_vm(kvm_t *kvm);
 int load_binary(kvm_t *kvm);
 int kvm_init_vcpu(kvm_t *kvm, vcpu_t *vcpu);
