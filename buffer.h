@@ -11,3 +11,4 @@ typedef struct io_buf {
 
 void io_buf_init(io_buf_t *io_buf);
 void flush_io_buf(io_buf_t *io_buf);
+void io_buf_store(io_buf_t *io_buf, int key);
