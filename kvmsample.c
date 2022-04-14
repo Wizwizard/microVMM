@@ -3,7 +3,7 @@
 int kvm_reset_vcpu(vcpu_t *vcpu) {
     int ret;
 
-    ret = ioctl(vcpufd, KVM_GET_SREGS, &vcpu->sregs);
+    ret = ioctl(vcpu->vcpu_fd, KVM_GET_SREGS, &vcpu->sregs);
     if (ret == -1) {
         err_exit("KVM_GET_SREGS");
     }
@@ -16,12 +16,11 @@ int kvm_reset_vcpu(vcpu_t *vcpu) {
     }
 
     // flags = 0x2 means x86 architecture
-    vcpu->regs = {
-        .rip = 0x1000,
-        .rax = 0,
-        .rbx = 0,
-        .rflags = 0x2,
-    };
+    vcpu->regs.rip = 0x1000;
+    vcpu->regs.rax = 0;
+    vcpu->regs.rbx = 0;
+    vcpu->regs.rflags = 0x2;
+
     ret = ioctl(vcpufd, KVM_SET_REGS, &vcpu->regs);
     if (ret == -1) {
         err_exit("KVM_SET_REGS");
@@ -125,7 +124,6 @@ void load_binary(kvm_t *kvm) {
             break;
         }
         kvm->ram_start += ret;
-
     }
 }
 
@@ -141,7 +139,7 @@ int kvm_run_vm(kvm_t *kvm, vcpu_t *vcpu) {
     io_buf = (io_buf_t*)malloc(sizeof(io_buf_t));
 
     timer->timer_enable = 0;
-    io_buf_init(io_buf):
+    io_buf_init(io_buf);
 
     int key_in = 0;
 

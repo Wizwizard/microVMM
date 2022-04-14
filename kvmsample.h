@@ -48,5 +48,5 @@ typedef struct vcpu {
 
 int kvm_init(kvm_t *kvm) ;
 int kvm_create_vm(kvm_t *kvm);
-int load_binary(kvm_t *kvm);
 int kvm_init_vcpu(kvm_t *kvm, vcpu_t *vcpu);
+void load_binary(kvm_t *kvm);
