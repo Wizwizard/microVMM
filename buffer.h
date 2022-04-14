@@ -1,5 +1,10 @@
 #include <termios.h>
 #include <sys/select.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+
 
 #define BUFFER_SIZE 100
 

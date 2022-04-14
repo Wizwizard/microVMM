@@ -1,5 +1,15 @@
 #include "timer.h"
 
+
+long get_cur_time_ms() {
+    
+    struct timespec s;
+    clock_gettime(CLOCK_REALTIME, &s);
+
+    return (s.tv_nsec/MIL) + s.tv_sec * 1000;
+    
+}
+
 int timer_should_fire(kvm_timer_t *timer) {
 
     if (timer->timer_enable) {

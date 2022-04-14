@@ -22,7 +22,7 @@ void io_buf_init(io_buf_t *io_buf) {
     io_buf->io_buffer = (char*) malloc(BUFFER_SIZE*sizeof(char));
     io_buf->cur_str = (char*) malloc(BUFFER_SIZE*sizeof(char));
     flush(io_buf->io_buffer);
-    flush(io_buf->cur_str):
+    flush(io_buf->cur_str);
     io_buf->io_buf_ind = 0;
 }
 
