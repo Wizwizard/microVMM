@@ -253,10 +253,11 @@ int main() {
                 puts("KVM_EXIT_HLT");
                 return 0;
             case KVM_EXIT_IO:
+                printf("kvm_exit_io, direction:%d, port:%x", run->io.direction, run->io.port);
                 if (run->io.direction == KVM_EXIT_IO_IN) {
                     if (run->io.port == 0x44) {
                         if(kbhit()) {
-                            *(((char *)run) + run->io.data_offset) = getchar();
+                            *(((char *)run) + run->io.data_offset) = getch();
                             key_in = 1;
                         } else {
                             key_in = 0;
