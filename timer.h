@@ -7,5 +7,5 @@ typedef struct kvm_timer {
 } kvm_timer_t;
     
 
-extern int timer_should_fire(kvm_timer_t *timer);
-extern void timer_update(kvm_timer_t *timer);
+int timer_should_fire(kvm_timer_t *timer);
+void timer_update(kvm_timer_t *timer);
